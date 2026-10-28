@@ -1,55 +1,66 @@
+# นำเข้าไลบรารี FastAPI หลักสำหรับสร้างเว็บแอปพลิเคชันและ API
 from fastapi import FastAPI
+# นำเข้า CORSMiddleware สำหรับจัดการและเปิดสิทธิ์การเข้าถึง API ข้ามพอร์ต (CORS)
 from fastapi.middleware.cors import CORSMiddleware
+# นำเข้า HTMLResponse สำหรับส่งโครงสร้างหน้าเว็บ HTML กลับไปแสดงผลที่เบราว์เซอร์
 from fastapi.responses import HTMLResponse
+# นำเข้า BaseModel จาก Pydantic สำหรับกำหนดโครงสร้างและตรวจสอบความถูกต้องของข้อมูล (Data Validation)
+from pydantic import BaseModel
 
+# สร้างตัวแปรหลัก (Instance) ของแอปพลิเคชัน FastAPI
 app = FastAPI()
 
-# ตั้งค่า CORS (รปภ. คอยคัดกรองข้ามพอร์ต)
-# สั่งเปิดใช้งานระบบ CORS ให้กับแอปพลิเคชันของเรา
+# ตั้งค่าระบบ CORS Middleware เพื่ออนุญาตให้โดเมนหรือพอร์ตอื่นสามารถดึงข้อมูลได้
 app.add_middleware(
     CORSMiddleware,
-    #นุญาตให้ทุกเว็บไซต์หรือทุกพอร์ตบนโลก (เครื่องหมาย * หมายถึงทั้งหมด) สามารถเข้ามาดึงข้อมูลจาก API ของเราได้
-    allow_origins=["*"],
-    # อนุญาตให้ใช้คำสั่ง HTTP ได้ทุกรูปแบบ เช่น GET, POST, PUT, DELETE
-    allow_methods=["*"],
-    # อนุญาตให้แนบข้อมูลส่วนหัว (Headers) มากับคำขอได้ทุกประเภท เช่น Token ยืนยันตัวตน
-    allow_headers=["*"],
+    allow_origins=["*"],       # เครื่องหมาย * หมายถึง อนุญาตให้ทุกเว็บไซต์หรือทุกพอร์ตเข้าถึงได้ทั้งหมด
+    allow_methods=["*"],       # อนุญาตให้ใช้คำสั่ง HTTP ทุกรูปแบบ (GET, POST, PUT, DELETE ฯลฯ)
+    allow_headers=["*"],       # อนุญาตให้ส่งข้อมูลส่วนหัว (Headers) มาได้ทุกประเภท (เช่น Token ยืนยันตัวตน)
 )
 
-# หน้าเว็บ Frontend คลีนๆ สวยงาม มินิมอล
+# สร้างฐานข้อมูลจำลองในหน่วยความจำ (In-memory Database) เก็บรายการสินค้าเริ่มต้น
+products_db = [
+    {"id": 1, "name": "iPhone 14 Pro Max", "price": 40000},
+    {"id": 2, "name": "Gaming Mouse", "price": 12000}
+]
+
+# กำหนดโครงสร้างข้อมูล (Schema) ที่คาดว่าจะได้รับตอนมีคนยิงคำสั่ง POST เข้ามา
+class ProductCreate(BaseModel):
+    name: str  # กำหนดให้ชื่อสินค้าต้องเป็นข้อความ (String)
+    price: int # กำหนดให้ราคาสินค้าต้องเป็นตัวเลขจำนวนเต็ม (Integer)
+
+# สร้าง Route หลัก (หน้าแรก /) เมื่อมีคนเปิดเข้าเว็บไซต์ผ่านเบราว์เซอร์
 @app.get("/", response_class=HTMLResponse)
 def home():
+    # ส่งโค้ด HTML หน้าเว็บแบบเรียบง่ายและคลีนที่สุดกลับไปแสดงผล
     return """
     <!DOCTYPE html>
     <html lang="th">
     <head>
         <meta charset="UTF-8">
         <title>CORS Demo</title>
-        <style>
-            body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f1f5f9; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-            .box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); text-align: center; width: 400px; }
-            h2 { color: #1e293b; margin-bottom: 10px; }
-            p { color: #64748b; font-size: 14px; margin-bottom: 20px; }
-            button { background: #3b82f6; color: white; border: none; padding: 10px 20px; font-size: 15px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
-            button:hover { background: #2563eb; }
-            pre { background: #0f172a; color: #38bdf8; padding: 15px; border-radius: 6px; text-align: left; margin-top: 20px; font-size: 13px; max-height: 150px; overflow-y: auto; }
-        </style>
     </head>
     <body>
-        <div class="box">
-            <h2>CORS Middleware Demo</h2>
-            <p>ทดสอบการดึงข้อมูล API ข้ามพอร์ตด้วย FastAPI</p>
-            <button onclick="getData()">ดึงข้อมูลสินค้า</button>
-            <pre id="output">รอผลลัพธ์...</pre>
-        </div>
+        <h2>CORS Middleware Demo</h2>
+        <p>ทดสอบการดึงข้อมูล API ข้ามพอร์ตผ่าน FastAPI</p>
+        
+        <!-- ปุ่มกดสำหรับเรียกใช้งานฟังก์ชัน JavaScript เพื่อดึงข้อมูล API -->
+        <button onclick="getData()">ดึงข้อมูลสินค้า (GET)</button>
+        <!-- พื้นที่กล่องข้อความสำหรับแสดงผลลัพธ์ JSON ที่ได้จาก Backend -->
+        <pre id="output">รอผลลัพธ์...</pre>
 
         <script>
+            // ฟังก์ชัน JavaScript สำหรับดึงข้อมูลจาก Backend แบบ Asynchronous
             async function getData() {
                 try {
-                    const res = await fetch('http://127.0.0.1:8000/api/products');
+                    // ส่งคำขอแบบ GET ไปที่ Endpoint /api/products
+                    const res = await fetch('/api/products');
+                    // แปลงผลลัพธ์ที่ได้ให้อยู่ในรูปของ JSON
                     const data = await res.json();
-                    document.getElementById('output').innerText = JSON.stringify(data, null, 2);
+                    // นำข้อมูลที่แปลงแล้วมาแสดงผลลงในแท็ก <pre id="output">
+                    document.getElementById('output').innerText = "📦 รายการสินค้า:\\n" + JSON.stringify(data, null, 2);
                 } catch (err) {
+                    // หากเกิดข้อผิดพลาดหรือโดน CORS บล็อก จะแสดงข้อความแจ้งเตือนที่นี่
                     document.getElementById('output').innerText = "CORS Error: " + err;
                 }
             }
@@ -58,12 +69,21 @@ def home():
     </html>
     """
 
-# Backend API ส่งข้อมูลสินค้า
-# กำหนดว่าถ้ามีใครยิงคำสั่งแบบ GET มาที่ลิงก์นี้ ให้ทำงานฟังก์ชันด้านล่าง
+# สร้าง API สำหรับรองรับคำสั่ง GET (ดึงข้อมูลสินค้าทั้งหมดส่งกลับไป)
 @app.get("/api/products")
-# ฟังก์ชันหลักของหลังบ้าน
 def get_products():
-    return [
-        {"id": 1, "name": "iPhone 14 Pro Max", "price": 40000},
-        {"id": 2, "name": "Gaming Mouse", "price": 12000}
-    ]
+    return products_db # ส่งข้อมูลรายการสินค้าทั้งหมดในฐานข้อมูลจำลองกลับไป
+
+# สร้าง API สำหรับรองรับคำสั่ง POST (รับข้อมูลสินค้าใหม่เข้ามาเพิ่มในระบบ)
+@app.post("/api/products")
+def add_product(product: ProductCreate):
+    # สร้างไอดีใหม่โดยนับจำนวนสินค้าเดิมบวก 1 และนำชื่อกับราคาจากที่ผู้ใช้ส่งมาสร้างเป็นสินค้าชิ้นใหม่
+    new_item = {
+        "id": len(products_db) + 1,
+        "name": product.name,
+        "price": product.price
+    }
+    # บันทึกสินค้าใหม่เข้าไปในฐานข้อมูลจำลอง (products_db)
+    products_db.append(new_item)
+    # ส่งสถานะความสำเร็จและข้อมูลสินค้าที่เพิ่งเพิ่มใหม่กลับไปหาผู้ส่ง
+    return {"status": "success", "added": new_item, "total_items": len(products_db)}
